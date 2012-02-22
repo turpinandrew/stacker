@@ -31,7 +31,7 @@
 #define MACULAR_RADIUS_SQ ( MACULAR_RADIUS * MACULAR_RADIUS)
 
    // linear from (FOVEA_RADIUS,0) to (MACULAR_RADIUS, MAX_THICK)
-#define MAX_THICK  60
+#define MAX_THICK  80
 #define MAX_AXON_COUNT(_dist) (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK*(float)DENSE_SCALE)
 
    // all in pixels

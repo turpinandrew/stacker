@@ -1,5 +1,5 @@
-GTK_INCLUDES = `pkg-config --cflags gtk+-2.0`
-GTK_LIBS = `pkg-config --libs gtk+-2.0`
+GTK_INCLUDES = `pkg-config --cflags gtk+-3.0`
+GTK_LIBS = `pkg-config --libs gtk+-3.0`
 
 DEFS = -DTHREADS=6    # number of EXTRA threads to use
 

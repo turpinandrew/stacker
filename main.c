@@ -24,14 +24,14 @@
 #include "types.h"
 
 //#define PRINT_ENDPOINTS
-#define PRINT_PATHS 100
+#define PRINT_PATHS 1
 //#define PRINT_OCT_PROFILE
 
 #define THETA_LIMIT  (M_PI/4.0)     // don't search outside +- this from proposed trajectory
 #define SCAN_POINTS_RADIUS 1000 // (MACULAR_RADIUS + 100)
 
    // macros for handling byte for count and thickness
-#define IS_ROOM(_c) (((_c)->thickness == UCHAR_MAX) || ( (_c)->count < (_c)->thickness))
+#define IS_ROOM(_c) (((_c)->thickness != UCHAR_MAX) && ( (_c)->count < (_c)->thickness))
 #define INC_COUNT(_c) do { (_c)->count += (((_c)->count) < UCHAR_MAX) ? 1 : 0; } while (0);
 
 // WARNING HAVE HARD CODED x for scanPoint
