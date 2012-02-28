@@ -122,8 +122,7 @@ static gpointer make_cell_piece(gpointer data) {
             continue;
          }
             // flip coin...
-         double prob = find_density(((float)x-(float)SIZE/2.0)/(float)PIXELS_PER_MM, ((float)y-(float)SIZE/2.0)/(float)PIXELS_PER_MM) /
-(double)PIXELS_PER_MM / (double)PIXELS_PER_MM*DENSE_SCALE;
+         double prob = find_density(((float)x-(float)SIZE/2.0)/(float)PIXELS_PER_MM, ((float)y-(float)SIZE/2.0)/(float)PIXELS_PER_MM) / (double)PIXELS_PER_MM / (double)PIXELS_PER_MM*DENSE_SCALE;
          if (gsl_rng_uniform(bb->rng) < prob) {
 //printf("\t(%d,%d) %d\n",bb->tlx,bb->tly,*(bb->numCells));fflush(stdout);
             double theta = atan2((double) y - (double)ONH_Y, (double) x - (double)ONH_X);

@@ -3,7 +3,7 @@
 
 #define PIXELS_PER_MM 1000
 
-#define DENSE_SCALE 1.0   // reduce density by this factor
+#define DENSE_SCALE 1.2   // multiply density by this factor
 
 #define SIZE (20 * PIXELS_PER_MM) //  20 mm square
 
@@ -26,13 +26,15 @@
 
    // macros to control thickness
 #define MACULAR_RADIUS (3 * PIXELS_PER_MM)
+#define MACULAR_RADIUS_SQ (MACULAR_RADIUS * MACULAR_RADIUS)
 #define MACULAR_DIST(_p) (int)round(sqrt( ((_p).x-SIZE/2)*((_p).x-SIZE/2)+((_p).y-SIZE/2)*((_p).y-SIZE/2)))
 #define MACULAR_DIST_SQ(_p) ( ((_p).x - SIZE/2)*((_p).x - SIZE/2) + ((_p).y - SIZE/2)*((_p).y - SIZE/2))
-#define MACULAR_RADIUS_SQ ( MACULAR_RADIUS * MACULAR_RADIUS)
+#define MACULAR_RADIUS (3 * PIXELS_PER_MM)
 
    // linear from (FOVEA_RADIUS,0) to (MACULAR_RADIUS, MAX_THICK)
-#define MAX_THICK  80
-#define MAX_AXON_COUNT(_dist) (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK*(float)DENSE_SCALE)
+#define MAX_THICK 40
+//#define MAX_AXON_COUNT(_dist) (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK*(float)DENSE_SCALE)
+#define MAX_AXON_COUNT(_dist) (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK)
 
    // all in pixels
 void init_grid(int *size, Grid ***grid);

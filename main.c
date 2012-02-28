@@ -23,11 +23,12 @@
 #include "density.h"
 #include "types.h"
 
-//#define PRINT_ENDPOINTS
-#define PRINT_PATHS 1
+#define PRINT_ENDPOINTS
+//#define PRINT_PATHS 1000
 //#define PRINT_OCT_PROFILE
 
 #define THETA_LIMIT  (M_PI/4.0)     // don't search outside +- this from proposed trajectory
+//#define THETA_LIMIT  (2.0*M_PI)     // don't search outside +- this from proposed trajectory
 #define SCAN_POINTS_RADIUS 1000 // (MACULAR_RADIUS + 100)
 
    // macros for handling byte for count and thickness
@@ -115,7 +116,7 @@ void print_path(Cell *c, char full) {
 ** Find closest cell in the direction of target from current (+-THETA_LIMIT)
 ** that is not target, and that has room to be part of a path.
 **
-** Use a spiral search (well, there squares of increasing size) outwards from
+** Use a spiral search (well, they're squares of increasing dist) outwards from
 ** current ignoring cells with flag==1, points outside theta range, and 
 ** count >= thickness.
 */
@@ -379,14 +380,14 @@ main() {
    fprintf(stderr,"threads not posix\n");
 #endif
 
-   fprintf(stderr,"# SCAN_POINTS_RADIUS %10d\n",SCAN_POINTS_RADIUS);
-   fprintf(stderr,"# MAX_THICK          %10d\n",MAX_THICK);
-   fprintf(stderr,"# THETA_LIMIT        %10.4f degrees\n",THETA_LIMIT*180.0/M_PI);
-   fprintf(stderr,"# MACULAR_RADIUS     %10.4f mm\n",(float)MACULAR_RADIUS/(float)PIXELS_PER_MM);
-   fprintf(stderr,"# ONH_X              %10d\n",ONH_X);
-   fprintf(stderr,"# ONH_Y              %10d\n",ONH_Y);
-   fprintf(stderr,"# MAJOR AXIS         %10d\n",ONH_MAJOR);
-   fprintf(stderr,"# MINOR AXIS         %10d\n",ONH_MINOR);
+   fprintf(stdout,"# SCAN_POINTS_RADIUS %10d\n",SCAN_POINTS_RADIUS);
+   fprintf(stdout,"# MAX_THICK          %10d\n",MAX_THICK);
+   fprintf(stdout,"# THETA_LIMIT        %10.4f degrees\n",THETA_LIMIT*180.0/M_PI);
+   fprintf(stdout,"# MACULAR_RADIUS     %10.4f mm\n",(float)MACULAR_RADIUS/(float)PIXELS_PER_MM);
+   fprintf(stdout,"# ONH_X              %10d\n",ONH_X);
+   fprintf(stdout,"# ONH_Y              %10d\n",ONH_Y);
+   fprintf(stdout,"# MAJOR AXIS         %10d\n",ONH_MAJOR);
+   fprintf(stdout,"# MINOR AXIS         %10d\n",ONH_MINOR);
 
    g_thread_init(NULL);
    gdk_threads_init();     /* Secure gtk */
@@ -404,7 +405,7 @@ main() {
 //if (MACULAR_DIST(cellBlock[i].p) < MACULAR_RADIUS)
 //printf("im %d\n",i);
 //return 0;
-   fprintf(stderr, "Number of cells: %d\n",numCells);
+   fprintf(stdout, "# Number of cells: %d\n",numCells);
    process(size, grid);
 
    /* Release gtk's global lock */
