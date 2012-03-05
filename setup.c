@@ -166,8 +166,8 @@ void init_cells()
       bb[i].bry = SIZE - 1;
 
       bb[i].rng = gsl_rng_alloc(gsl_rng_default);
-      gsl_rng_set(bb[i].rng, time(NULL) * (i+1));
-      //gsl_rng_set(bb[i].rng, 1 * (i+1));
+      //gsl_rng_set(bb[i].rng, time(NULL) * (i+1));
+      gsl_rng_set(bb[i].rng, 1 * (i+1));
 
       bb[i].numCells = (int *)malloc(sizeof(int));
       *(bb[i].numCells) = 0;
@@ -195,7 +195,7 @@ void init_cells()
       free(bb[i].loc);
    }
 
-   fprintf(stderr,"Number of cells = %d\n",numCells);
+   fprintf(stderr,"# Number of cells = %d\n",numCells);
 
    qsort(loc, numCells, sizeof(PointD), cmp_PointD);
 
@@ -208,10 +208,7 @@ void init_cells()
       cellBlock[i].count     = 0;
       cellBlock[i].flag      = 0;
       int distFromFovea = MACULAR_DIST_SQ(loc[i].p);
-      if (distFromFovea > MACULAR_RADIUS_SQ)
-         cellBlock[i].thickness = UCHAR_MAX;
-      else
-         cellBlock[i].thickness = MAX_AXON_COUNT(sqrt(distFromFovea));
+      cellBlock[i].thickness = MAX_AXON_COUNT(sqrt(distFromFovea));
       cellBlock[i].alternate = NULL;
    
       grid[loc[i].p.x][loc[i].p.y].soma = cellBlock + i;

@@ -27,8 +27,8 @@ struct cell {
    Node *path;       // a linked list of cells that path jumps along
                      // first element of path is self
    //float distToOnh;
-   unsigned char count;        // count of paths that go through this cell
-   unsigned char thickness;    // number of paths that are allowed to go through this cell
+   unsigned int count;        // count of paths that go through this cell
+   unsigned int thickness;    // number of paths that are allowed to go through this cell
 
    char flag;        // used for various, initially all 0 
 

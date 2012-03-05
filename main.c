@@ -23,6 +23,8 @@
 #include "density.h"
 #include "types.h"
 
+int debug = 0; 
+
 #define PRINT_ENDPOINTS
 //#define PRINT_PATHS 1000
 //#define PRINT_OCT_PROFILE
@@ -32,8 +34,10 @@
 #define SCAN_POINTS_RADIUS 1000 // (MACULAR_RADIUS + 100)
 
    // macros for handling byte for count and thickness
-#define IS_ROOM(_c) (((_c)->thickness != UCHAR_MAX) && ( (_c)->count < (_c)->thickness))
-#define INC_COUNT(_c) do { (_c)->count += (((_c)->count) < UCHAR_MAX) ? 1 : 0; } while (0);
+//#define IS_ROOM(_c) (((_c)->thickness != UCHAR_MAX) && ( (_c)->count < (_c)->thickness))
+//#define INC_COUNT(_c) do { (_c)->count += (((_c)->count) < UCHAR_MAX) ? 1 : 0; } while (0);
+#define IS_ROOM(_c) ((_c)->count < (_c)->thickness)
+#define INC_COUNT(_c) do { (_c)->count += 1; } while (0);
 
 // WARNING HAVE HARD CODED x for scanPoint
 
@@ -59,9 +63,9 @@ init_scanPoints() {
 
       // use dist temporarily for sorting
    int index = 0;
-   //for(int i = -SCAN_POINTS_RADIUS ; i <= +SCAN_POINTS_RADIUS ; i++)
    //for(int i = 0 ; i < SCAN_POINTS_RADIUS ; i++) // +SCAN_POINTS_RADIUS ; i++)
-   for(int i = -100 ; i < 100 ; i++) // +SCAN_POINTS_RADIUS ; i++)
+   //for(int i = -100 ; i < 100 ; i++) // +SCAN_POINTS_RADIUS ; i++)
+   for(int i = -SCAN_POINTS_RADIUS ; i <= +SCAN_POINTS_RADIUS ; i++)
       for(int j = -SCAN_POINTS_RADIUS ; j <= +SCAN_POINTS_RADIUS ; j++) {
          if (i == 0 && j == 0) continue;  // exclude (0,0)
          scanPoints[index].p.x = i;
@@ -122,8 +126,8 @@ void print_path(Cell *c, char full) {
 */
 Cell *
 findNewPath(Cell *current, Cell *target, Grid **grid) {
-//printf("# current = %5d %5d ",current->p.x, current->p.y);
-//printf(" wants %5d %5d ",target->p.x, target->p.y);
+if (debug)printf("# current = %5d %5d ",current->p.x, current->p.y);
+if (debug)printf(" wants %5d %5d ",target->p.x, target->p.y);
 
    double theta = atan2(target->p.y - current->p.y, target->p.x - current->p.x);
 
@@ -150,11 +154,17 @@ findNewPath(Cell *current, Cell *target, Grid **grid) {
          //Point po = {ONH_X, ONH_Y};
          //double theta = atan2((double) y - (double)ONH_Y, (double) x - (double)ONH_X);
          //c->distToOnh = DIST(c->p,po) - ONH_EDGE(theta);
-         c->count     = 1;
+         c->count     = 0;
          int distFromFovea = MACULAR_DIST_SQ(c->p);
          c->thickness = MAX_AXON_COUNT(sqrt(distFromFovea));
          c->flag      = 0;
          c->alternate = NULL;
+if (debug) {
+if (target->path->next == NULL)
+printf("Fake cell (%5d,%5d) -> (%5d,%5d)\n",x,y,-1, -1);
+else
+printf("Fake cell (%5d,%5d) -> (%5d,%5d) th=%u\n",x,y,target->path->next->c->p.x, target->path->next->c->p.y,c->thickness);
+}
 
          Node *p = malloc(sizeof(Node));  // self then target.path->next
          p->c = c;
@@ -187,7 +197,23 @@ findNewPath(Cell *current, Cell *target, Grid **grid) {
 int 
 makeOnePath(int icc, Cell *target, Grid **grid) {
    Cell *current = cellBlock + icc;
+/*
+if (grid[9997][10445].soma != NULL) {
+    Node *n = grid[9997][10445].soma->path;
+    if (grid[9997][10445].soma->alternate != NULL)
+        n = grid[9997][10445].soma->alternate->path;
+    if (n != NULL) {
+        printf("(%5d,%5d)", n->c->p.x, n->c->p.y);
+        if (n->next != NULL) printf("->(%5d,%5d)", n->next->c->p.x, n->next->c->p.y);
+        while (n->next != NULL)
+            n = n->next;
+        printf("...(%5d,%5d)\n", n->c->p.x, n->c->p.y);
+    } else
+        printf("( 9997,10445)...NULL?)\n");
+}
+*/
 
+if (debug) printf("Current = (%5d,%5d)\n", current->p.x, current->p.y);
       // First, put in a start of path node at self
       // Note no space checking (assuming axon can start here)
    current->path = (Node *)malloc(sizeof(Node));
@@ -200,12 +226,18 @@ makeOnePath(int icc, Cell *target, Grid **grid) {
    int result = 0;
 
    while (target != NULL) {
+if (debug)printf("\ttarget = (%5d,%5d)\n", target->p.x, target->p.y);
       result = 0; // assume fail
              // check if we can just follow same path (to save memory)
       Node *n = target->path;
+if (debug)printf("\t\tcheck (%5d, %5d) count=%d < th=%u\n", n->c->p.x, n->c->p.y,n->c->count, n->c->thickness);
       while (n != NULL && IS_ROOM(n->c))
+{
          n = n->next;
+if (debug)if (n!=NULL) printf("\t\tcheck (%5d, %5d) count=%d < th=%u\n", n->c->p.x, n->c->p.y,n->c->count, n->c->thickness);
+}
       if (n == NULL) { // hooray! just incrememnt count in each cell on path 
+if (debug)printf("\tNo Copy required\n");
          tail->next = target->path;
          n = target->path;
          while ((n != NULL) && (n->next != NULL)) {
@@ -317,7 +349,6 @@ print_oct(Grid **grid, float radius) {
 void 
 process(int size, Grid **grid) {
    int i = 0;
-
    float distToOnh = 0;
    for( ; i < numCells && distToOnh < START_DIST ; i++) {
       Point po = {ONH_X, ONH_Y};
@@ -329,7 +360,11 @@ process(int size, Grid **grid) {
          cellBlock[i].path             = (Node *)malloc(sizeof(Node));
          cellBlock[i].path->c          = cellBlock + i;
          cellBlock[i].path->next       = NULL;
-         cellBlock[i].thickness        = UCHAR_MAX;
+         cellBlock[i].thickness        = 10000000; // UINT_MAX - 1;
+         #ifdef PRINT_ENDPOINTS
+         printf("# S ");
+         print_path(cellBlock + i, FALSE);
+         #endif
       }
    }
 
@@ -355,6 +390,7 @@ process(int size, Grid **grid) {
          #endif
       } else {
          printf("# K %d %d\n",cellBlock[i].p.x, cellBlock[i].p.y);
+         grid[cellBlock[i].p.x][cellBlock[i].p.y].soma = NULL;
       }
    }
    #ifdef PRINT_OCT_PROFILE
@@ -369,15 +405,15 @@ process(int size, Grid **grid) {
 int
 main() {
 #ifdef G_THREADS_ENABLED
-   fprintf(stderr,"threads enabled\n");
+   fprintf(stderr,"# threads enabled\n");
 #else
-   fprintf(stderr,"threads not enabled\n");
+   fprintf(stderr,"# threads not enabled\n");
 #endif
 
 #ifdef G_THREADS_IMPL_POSIX
-   fprintf(stderr,"threads posix\n");
+   fprintf(stderr,"# threads posix\n");
 #else
-   fprintf(stderr,"threads not posix\n");
+   fprintf(stderr,"# threads not posix\n");
 #endif
 
    fprintf(stdout,"# SCAN_POINTS_RADIUS %10d\n",SCAN_POINTS_RADIUS);
