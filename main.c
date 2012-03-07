@@ -26,12 +26,8 @@
 int debug = 0; 
 
 #define PRINT_ENDPOINTS
-//#define PRINT_PATHS 1000
+#define PRINT_PATHS 100
 //#define PRINT_OCT_PROFILE
-
-#define THETA_LIMIT  (M_PI/4.0)     // don't search outside +- this from proposed trajectory
-//#define THETA_LIMIT  (2.0*M_PI)     // don't search outside +- this from proposed trajectory
-#define SCAN_POINTS_RADIUS 1000 // (MACULAR_RADIUS + 100)
 
    // macros for handling byte for count and thickness
 //#define IS_ROOM(_c) (((_c)->thickness != UCHAR_MAX) && ( (_c)->count < (_c)->thickness))
@@ -39,8 +35,7 @@ int debug = 0;
 #define IS_ROOM(_c) ((_c)->count < (_c)->thickness)
 #define INC_COUNT(_c) do { (_c)->count += 1; } while (0);
 
-// WARNING HAVE HARD CODED x for scanPoint
-
+#define SCAN_POINTS_RADIUS (SIZE/2)   // size of search lookup table
 PointD *scanPoints; // list of deltaX, deltaY, theta to use for searching grid
 int scanPointLen;   // scanPoints[0..scanPointLen-1] are valid
 
@@ -63,16 +58,16 @@ init_scanPoints() {
 
       // use dist temporarily for sorting
    int index = 0;
-   //for(int i = 0 ; i < SCAN_POINTS_RADIUS ; i++) // +SCAN_POINTS_RADIUS ; i++)
-   //for(int i = -100 ; i < 100 ; i++) // +SCAN_POINTS_RADIUS ; i++)
-   for(int i = -SCAN_POINTS_RADIUS ; i <= +SCAN_POINTS_RADIUS ; i++)
-      for(int j = -SCAN_POINTS_RADIUS ; j <= +SCAN_POINTS_RADIUS ; j++) {
+   for(int i = -NEW_PATH_RADIUS_LIMIT ; i <= +NEW_PATH_RADIUS_LIMIT ; i++)
+      for(int j = -NEW_PATH_RADIUS_LIMIT ; j <= +NEW_PATH_RADIUS_LIMIT ; j++) {
          if (i == 0 && j == 0) continue;  // exclude (0,0)
-         scanPoints[index].p.x = i;
-         scanPoints[index].p.y = j;
          Point p = {i,j};
          Point po = {0,0};
-         scanPoints[index].dist = DIST(p,po);
+         float dist = DIST(p,po);
+         if (dist > NEW_PATH_RADIUS_LIMIT) continue;    // exclude corner points
+         scanPoints[index].p.x = i;
+         scanPoints[index].p.y = j;
+         scanPoints[index].dist = dist;
          index++;
       }
 
@@ -84,11 +79,27 @@ init_scanPoints() {
       scanPoints[i].dist = atan2(scanPoints[i].p.y, scanPoints[i].p.x);
 }//init_scanPoints()
 
+/*
+** Return 1 if (x,y) is inside FOVEA_RADIUS, 0 otherwise
+*/
 int
 in_fovea(int x, int y) {
    float distSqr = (x-SIZE/2)*(x-SIZE/2) + (y-SIZE/2)*(y-SIZE/2);
    return (distSqr <= FOVEA_RADIUS*FOVEA_RADIUS);
 }//in_fovea()
+
+/*
+** Return 1 if a and b are on different sides of the raphe, 0 otherwise
+*/
+int
+cross_raphe(Point a, Point b) {
+    if (a.x > SIZE/2 || b.x > SIZE/2) return 0;  // there is no spoon (raphe)
+
+    if (a.y < SIZE/2) 
+        return (b.y > SIZE/2);
+
+    return (b.y < SIZE/2);
+}//cross_raphe()
 
 /*
 ** Just print cell position and last point of path,
@@ -281,33 +292,11 @@ if (debug)printf("\tNo Copy required\n");
 }//makeOnePath()
 
 /*
-** Find the closest cell to cellBlock[i] in cellBlock[0..i-1]
-** towards the ONH
-** ASSUMES cellBlock is sorted in increasing distToOnh
-int
-findClosestCompleted(int i) {
-   float minD = DIST(cellBlock[i-1].p, cellBlock[i].p);
-   int   minJ = i-1;
-//   int deltaX = ONH_X - cellBlock[i].p.x;
-//   int deltaY = ONH_Y - cellBlock[i].p.y;
-   for(int j = i-2 ; j >= 0 && cellBlock[i].distToOnh - cellBlock[j].distToOnh < minD ; j--) {
-      if (cellBlock[i].count >= cellBlock[i].thickness)   continue;    // no room
-      float dist = DIST(cellBlock[j].p, cellBlock[i].p);
-      if ((dist < minD)) {
-//      &&  (((cellBlock[j].p.y - cellBlock[i].p.y < 0)  && deltaY < 0) 
-//         ||((cellBlock[j].p.y - cellBlock[i].p.y >= 0) && deltaY >= 0))
-//      &&  (((cellBlock[j].p.x - cellBlock[i].p.y < 0) && deltaX < 0) 
-//         ||((cellBlock[j].p.x - cellBlock[i].p.y >= 0 && deltaX >= 0)))) {
-         minD = dist;
-         minJ = j;
-      }
-   }
-   return minJ;
-}//findClosestCompleted()
+** This version uses precomputed scanPoints array, but it might not be 
+** big enough when DENSE_SCALE is small
 */
-
 Cell *
-findClosestCompleted(int i, Grid **grid) {
+findClosestCompleted_restrictedArea(int i, Grid **grid) {
    Cell *target = cellBlock + i;
    Cell *minC = NULL;
    for(PointD *s = scanPoints ; (s < scanPoints + scanPointLen) && (minC == NULL) ; s++) {
@@ -315,15 +304,43 @@ findClosestCompleted(int i, Grid **grid) {
       int y = target->p.y + s->p.y;
       if ((x < 0) || (x >= SIZE)) continue;        // off grid
       if ((y < 0) || (y >= SIZE)) continue;
-      if ((target->p.y < SIZE/2) && (y > SIZE/2)) continue; // no cross raphe
-      if ((target->p.y > SIZE/2) && (y < SIZE/2)) continue; // no cross raphe
+      Point p = {x,y};
+      if (cross_raphe(target->p, p)) continue;    
 
       minC = grid[x][y].soma; // note could be NULL
 
-      if (minC != NULL && minC->path == NULL)
+      if (minC != NULL && minC->path == NULL)                  // no path yet
+         minC = NULL;
+      if (minC != NULL && (minC->count >= minC->thickness))    // no room
          minC = NULL;
    }
    return minC;
+}//findClosestCompleted_restrictedArea()
+
+/*
+** Find the closest cell to cellBlock[i] in cellBlock[0..i-1]
+** towards the ONH
+** ASSUMES cellBlock is sorted in increasing distToOnh
+*/
+Cell *
+findClosestCompleted(int i, Grid **grid) {
+   Cell *res = findClosestCompleted_restrictedArea(i, grid);
+   if (res != NULL)
+      return res;
+
+   float minD = DIST(cellBlock[i-1].p, cellBlock[i].p);
+   int   minJ = i-1;
+   for(int j = i-2 ; j >= 0 ; j--) {
+      if (cellBlock[j].path  == NULL)                   continue;  // no path yet
+      if (cellBlock[j].count >= cellBlock[j].thickness) continue;  // no room
+      if (cross_raphe(cellBlock[i].p, cellBlock[j].p))  continue;  // crosses raphe
+      float dist = DIST(cellBlock[j].p, cellBlock[i].p);
+      if ((dist < minD)) {
+         minD = dist;
+         minJ = j;
+      }
+   }
+   return cellBlock + minJ;
 }//findClosestCompleted()
 
 /*
@@ -417,9 +434,10 @@ main() {
 #endif
 
    fprintf(stdout,"# SCAN_POINTS_RADIUS %10d\n",SCAN_POINTS_RADIUS);
+   fprintf(stdout,"# DENSE_SCALE        %10.4f\n",DENSE_SCALE);
    fprintf(stdout,"# MAX_THICK          %10d\n",MAX_THICK);
-   fprintf(stdout,"# THETA_LIMIT        %10.4f degrees\n",THETA_LIMIT*180.0/M_PI);
    fprintf(stdout,"# MACULAR_RADIUS     %10.4f mm\n",(float)MACULAR_RADIUS/(float)PIXELS_PER_MM);
+   fprintf(stdout,"# THETA_LIMIT        %10.4f degrees\n",THETA_LIMIT*180.0/M_PI);
    fprintf(stdout,"# ONH_X              %10d\n",ONH_X);
    fprintf(stdout,"# ONH_Y              %10d\n",ONH_Y);
    fprintf(stdout,"# MAJOR AXIS         %10d\n",ONH_MAJOR);

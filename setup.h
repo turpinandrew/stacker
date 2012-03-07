@@ -3,7 +3,7 @@
 
 #define PIXELS_PER_MM 1000
 
-#define DENSE_SCALE 1.2 // multiply density by this factor
+#define DENSE_SCALE 0.1 // multiply density by this factor
 
 #define SIZE (20 * PIXELS_PER_MM) //  20 mm square
 
@@ -32,9 +32,16 @@
 
    // linear from (FOVEA_RADIUS,0) to (MACULAR_RADIUS, MAX_THICK)
 #define min(_a, _b) ((_a) < (_b) ? (_a) : (_b))
-#define MAX_THICK min(60, (int)round(60 * DENSE_SCALE))
+//#define MAX_THICK 20
 //#define MAX_AXON_COUNT(_dist) (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK*(float)DENSE_SCALE)
+#define MAX_THICK 20
 #define MAX_AXON_COUNT(_dist) min(MAX_THICK, (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK))
+
+    // how far to search for a new path during growth?
+#define NEW_PATH_RADIUS_LIMIT (MACULAR_RADIUS/2.0*1.1)
+
+    // don't search outside +- this from proposed trajectory during growth
+#define THETA_LIMIT  (M_PI/3.0)     
 
    // all in pixels
 void init_grid(int *size, Grid ***grid);
