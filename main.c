@@ -26,7 +26,7 @@
 int debug = 0; 
 
 #define PRINT_ENDPOINTS
-#define PRINT_PATHS 100
+#define PRINT_PATHS 1000
 //#define PRINT_OCT_PROFILE
 
    // macros for handling byte for count and thickness
@@ -35,7 +35,6 @@ int debug = 0;
 #define IS_ROOM(_c) ((_c)->count < (_c)->thickness)
 #define INC_COUNT(_c) do { (_c)->count += 1; } while (0);
 
-#define SCAN_POINTS_RADIUS (SIZE/2)   // size of search lookup table
 PointD *scanPoints; // list of deltaX, deltaY, theta to use for searching grid
 int scanPointLen;   // scanPoints[0..scanPointLen-1] are valid
 
@@ -53,7 +52,7 @@ extern int numCells;    // from setup.c
 */
 void
 init_scanPoints() {
-   scanPoints = (PointD *) malloc(sizeof(PointD)*(2*SCAN_POINTS_RADIUS+1)*(2*SCAN_POINTS_RADIUS+1));
+   scanPoints = (PointD *) malloc(sizeof(PointD)*(2*NEW_PATH_RADIUS_LIMIT+1)*(2*NEW_PATH_RADIUS_LIMIT+1));
    assert(scanPoints != NULL);
 
       // use dist temporarily for sorting
@@ -325,9 +324,10 @@ findClosestCompleted_restrictedArea(int i, Grid **grid) {
 Cell *
 findClosestCompleted(int i, Grid **grid) {
    Cell *res = findClosestCompleted_restrictedArea(i, grid);
-   if (res != NULL)
+//   if (res != NULL)
       return res;
 
+/*
    float minD = DIST(cellBlock[i-1].p, cellBlock[i].p);
    int   minJ = i-1;
    for(int j = i-2 ; j >= 0 ; j--) {
@@ -341,6 +341,7 @@ findClosestCompleted(int i, Grid **grid) {
       }
    }
    return cellBlock + minJ;
+*/
 }//findClosestCompleted()
 
 /*
@@ -433,15 +434,15 @@ main() {
    fprintf(stderr,"# threads not posix\n");
 #endif
 
-   fprintf(stdout,"# SCAN_POINTS_RADIUS %10d\n",SCAN_POINTS_RADIUS);
-   fprintf(stdout,"# DENSE_SCALE        %10.4f\n",DENSE_SCALE);
-   fprintf(stdout,"# MAX_THICK          %10d\n",MAX_THICK);
-   fprintf(stdout,"# MACULAR_RADIUS     %10.4f mm\n",(float)MACULAR_RADIUS/(float)PIXELS_PER_MM);
-   fprintf(stdout,"# THETA_LIMIT        %10.4f degrees\n",THETA_LIMIT*180.0/M_PI);
-   fprintf(stdout,"# ONH_X              %10d\n",ONH_X);
-   fprintf(stdout,"# ONH_Y              %10d\n",ONH_Y);
-   fprintf(stdout,"# MAJOR AXIS         %10d\n",ONH_MAJOR);
-   fprintf(stdout,"# MINOR AXIS         %10d\n",ONH_MINOR);
+   fprintf(stdout,"# DENSE_SCALE           %10.4f\n",DENSE_SCALE);
+   fprintf(stdout,"# MAX_THICK             %10d\n",MAX_THICK);
+   fprintf(stdout,"# MACULAR_RADIUS        %10.4f mm\n",(float)MACULAR_RADIUS/(float)PIXELS_PER_MM);
+   fprintf(stdout,"# THETA_LIMIT           %10.4f degrees\n",THETA_LIMIT*180.0/M_PI);
+   fprintf(stdout,"# NEW_PATH_RADIUS_LIMIT %10.4f\n",NEW_PATH_RADIUS_LIMIT);
+   fprintf(stdout,"# ONH_X                 %10d\n",ONH_X);
+   fprintf(stdout,"# ONH_Y                 %10d\n",ONH_Y);
+   fprintf(stdout,"# MAJOR AXIS            %10d\n",ONH_MAJOR);
+   fprintf(stdout,"# MINOR AXIS            %10d\n",ONH_MINOR);
 
    g_thread_init(NULL);
    gdk_threads_init();     /* Secure gtk */
