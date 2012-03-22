@@ -1,12 +1,15 @@
 GTK_INCLUDES = `pkg-config --cflags gtk+-3.0`
 GTK_LIBS = `pkg-config --libs gtk+-3.0`
 
-DEFS = -DTHREADS=10    # number of EXTRA threads to use
+DEFS1 = -DTHREADS=10    # number of EXTRA threads to use
+DEFS2 = -DRANDOM_SEED_IS_TIME  # if not defined, random seed is always == 1
+
+DEFS = $(DEFS1) $(DEFS2)
 
 #for gcc
 CC = gcc
-#CFLAGS = -O3 -Wall -std=c99 $(DEFS)
-CFLAGS = -g -Wall -std=c99 $(DEFS)
+CFLAGS = -O3 -Wall -std=c99 $(DEFS)
+#CFLAGS = -g -Wall -std=c99 $(DEFS)
 
 # for icc
    # remark #981: operands are evaluated in unspecified order

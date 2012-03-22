@@ -171,8 +171,11 @@ void init_cells()
       bb[i].bry = SIZE - 1;
 
       bb[i].rng = gsl_rng_alloc(gsl_rng_default);
-      //gsl_rng_set(bb[i].rng, time(NULL) * (i+1));
+#ifdef RANDOM_SEED_IS_TIME
+      gsl_rng_set(bb[i].rng, time(NULL) * (i+1));
+#else
       gsl_rng_set(bb[i].rng, 1 * (i+1));
+#endif
 
       bb[i].numCells = (int *)malloc(sizeof(int));
       *(bb[i].numCells) = 0;

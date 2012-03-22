@@ -298,8 +298,7 @@ process(Grid **grid) {
    }
 
    for( ; i < numCells ; i++) {
-      //if (cellBlock[i].p.x > 12000) continue;
-      //if (cellBlock[i].p.x > ONH_X) continue;
+      if (cellBlock[i].p.x > ONH_X) continue;
       //if (cellBlock[i].p.x < 5000) continue;
       //if (cellBlock[i].p.y < 5000) continue;
       //if (cellBlock[i].p.y > 15000) continue;
@@ -353,7 +352,7 @@ main() {
    fprintf(stdout,"# MINOR AXIS            %10d\n",ONH_MINOR);
    fprintf(stdout,"# SCALE                 %10.4f\n",SCALE);
    fprintf(stdout,"# GRID_SIZE             %10d\n",GRID_SIZE);
-   fprintf(stdout,"# NEW_PATH_RADIUS_LIMIT %10.4f\n",NEW_PATH_RADIUS_LIMIT);
+   fprintf(stdout,"# NEW_PATH_RADIUS_LIMIT %10d\n",NEW_PATH_RADIUS_LIMIT);
 
    g_thread_init(NULL);
    gdk_threads_init();     /* Secure gtk */
