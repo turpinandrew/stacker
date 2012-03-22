@@ -32,26 +32,31 @@ static gpointer init_grid_piece(gpointer data) {
 //printf("Init gp: (%d,%d) -> (%d,%d)\n",bb->tlx,bb->tly,bb->brx, bb->bry);
    for(int x = bb->tlx ; x <= bb->brx ; x++) {
       for(int y = bb->tly ; y <= bb->bry ; y++) {
-         grid[x][y].soma = NULL;
+         Point p_xy = {x*SCALE,y*SCALE};
+         int distFromFovea = MACULAR_DIST_SQ(p_xy);
+         if (distFromFovea <= FOVEA_RADIUS * FOVEA_RADIUS)
+            grid[x][y].thickness = 0;
+         else
+            grid[x][y].thickness = MAX_AXON_COUNT(sqrt(distFromFovea)) * SCALE;
+         grid[x][y].count           = 0;
+         grid[x][y].flag            = 0;
+         grid[x][y].lastPathThrough = NULL;
+         grid[x][y].p.x             = x;
+         grid[x][y].p.y             = y;
       }
    }
    return NULL;
 }//init_grid_piece()
 
 /* 
-   Set square grid SIZE*SIZE all to NULL, *** except in fovea, raphe and ONH where set to 1 
-   Assumes fovea is at (SIZE/2, SIZE/2)
-   Assumes raphe is at (0...SIZE/2, SIZE/2)
-   Sets *size to SIZE
+   Set thickness for square grid GRID_SIZE
 */
-void init_grid(int *size, Grid ***inGrid) 
+void init_grid(Grid ***inGrid) 
 {
-   *size = SIZE;
-
-   grid = (Grid **) malloc(sizeof(Grid *)*SIZE);
+   grid = (Grid **) malloc(sizeof(Grid *)*GRID_SIZE);
    assert(grid != NULL);
-   for(int x = 0 ; x < SIZE ; x++) {
-      grid[x] = (Grid *) malloc(sizeof(Grid)*SIZE);
+   for(int x = 0 ; x < GRID_SIZE ; x++) {
+      grid[x] = (Grid *) malloc(sizeof(Grid)*GRID_SIZE);
       assert(grid[x] != NULL);
    }
 
@@ -60,10 +65,10 @@ void init_grid(int *size, Grid ***inGrid)
         //Create threads into an array threads[0..THREADS-1]
    BB *bb = (BB *)malloc(sizeof(BB) * (THREADS+1));
    for(int i = 0 ; i < THREADS+1 ; i++) {
-      bb[i].tlx = (int)round((float)    i   * (float)SIZE / ((float)THREADS+1.0))    ;
-      bb[i].brx = (int)round(((float)i+1.0) * (float)SIZE / ((float)THREADS+1.0)) - 1;
+      bb[i].tlx = (int)round((float)    i   * (float)(GRID_SIZE) / ((float)THREADS+1.0))    ;
+      bb[i].brx = (int)round(((float)i+1.0) * (float)(GRID_SIZE) / ((float)THREADS+1.0)) - 1;
       bb[i].tly = 0;
-      bb[i].bry = SIZE - 1;
+      bb[i].bry = GRID_SIZE - 1;
       bb[i].rng = NULL; 
    }
    GError    *error = NULL;
@@ -77,16 +82,18 @@ void init_grid(int *size, Grid ***inGrid)
    free(bb);
    free(threads);
 
+/*
       // block out fovea
-   for(int x = -FOVEA_RADIUS ; x <= +FOVEA_RADIUS ; x++)
-      for(int y = -FOVEA_RADIUS ; y <= +FOVEA_RADIUS ; y++)
-         if (x*x + y*y <= FOVEA_RADIUS * FOVEA_RADIUS)
-            grid[SIZE/2+x][SIZE/2+y].soma = (Cell *)1;
+   int fRad = round((float)FOVEA_RADIUS / (float)SCALE);
+   for(int x = -fRad ; x <= +fRad ; x++)
+      for(int y = -fRad ; y <= +fRad ; y++)
+         if (x*x + y*y <= fRad * fRad)
+            grid[GRID_SIZE/2+x][GRID_SIZE/2+y].thickness = 0;
 
       // add horizontal raphe
-   for(int x = 0 ; x < SIZE/2 ; x++) {
-      int y = SIZE/2;      // XXX might want to change this to be dependant on Fov->ONH angle
-      grid[x][y].soma = (Cell *)1;
+   for(int x = 0 ; x < GRID_SIZE/2 ; x++) {
+      int y = GRID_SIZE/2;  // XXX might want to change this to be dependant on Fov->ONH angle
+      grid[x][y].thickness = 0;
    }
 
       // block out ONH (+-2 in loops to catch rounding errors)
@@ -96,31 +103,29 @@ void init_grid(int *size, Grid ***inGrid)
          Point p = {x,y};
          Point po = {ONH_X, ONH_Y};
          if (DIST(p,po) <= ONH_EDGE(theta) + 1)  // +1 just to get at least one pixel away
-            grid[x][y].soma = (Cell *)1;
+            grid[(int)floor((float)x/(float)SCALE)][(int)floor((float)y/(float)SCALE)].thickness = 0;
       }
-
-   *inGrid = grid;
-
-/*
-   for(int x = 0 ; x < SIZE ; x++)
-      for(int y = 0 ; y < SIZE ; y++)
-         if (grid[x][y] > 0)
-            printf("%d %d %d\n",x,y,grid[x][y]);
 */
 
+   *inGrid = grid;
 }//init_grid()
 
-// *** Note reset soma to NULL if soma == 1
 static gpointer make_cell_piece(gpointer data) {
    BB *bb = (BB *)data;
 //printf("make Cell gp: (%d,%d) -> (%d,%d)\n",bb->tlx,bb->tly,bb->brx, bb->bry);fflush(stdout);
+   Point po = {ONH_X, ONH_Y};
    for(int x = bb->tlx ; x <= bb->brx ; x++) {
       for(int y = bb->tly ; y <= bb->bry ; y++) {
             // check room, not in fovea, not in ONH, not on raphe
-         if (grid[x][y].soma) {
-            grid[x][y].soma = NULL;      // reset soma
+         if ((x-SIZE/2)*(x-SIZE/2) + (y-SIZE/2)*(y-SIZE/2) <= FOVEA_RADIUS * FOVEA_RADIUS)
             continue;
-         }
+         if ((x < SIZE/2) && (fabs(y-SIZE/2) < FOVEA_RADIUS/2))   // assume raphe as thick as fovea/2
+            continue;
+         Point p = {x,y};
+         double theta = atan2((double) y - (double)ONH_Y, (double) x - (double)ONH_X);
+         if (DIST(p,po) <= ONH_EDGE(theta) + 1)  // +1 just to get at least one pixel away
+            continue;
+
             // flip coin...
          double prob = find_density(((float)x-(float)SIZE/2.0)/(float)PIXELS_PER_MM, ((float)y-(float)SIZE/2.0)/(float)PIXELS_PER_MM) / (double)PIXELS_PER_MM / (double)PIXELS_PER_MM*DENSE_SCALE;
          if (gsl_rng_uniform(bb->rng) < prob) {
@@ -166,8 +171,8 @@ void init_cells()
       bb[i].bry = SIZE - 1;
 
       bb[i].rng = gsl_rng_alloc(gsl_rng_default);
-      gsl_rng_set(bb[i].rng, time(NULL) * (i+1));
-      //gsl_rng_set(bb[i].rng, 1 * (i+1));
+      //gsl_rng_set(bb[i].rng, time(NULL) * (i+1));
+      gsl_rng_set(bb[i].rng, 1 * (i+1));
 
       bb[i].numCells = (int *)malloc(sizeof(int));
       *(bb[i].numCells) = 0;
@@ -201,17 +206,9 @@ void init_cells()
 
    cellBlock = (Cell *)malloc(sizeof(Cell) * numCells);
    assert(cellBlock != NULL);
-   for (int i = 0 ; i < numCells ; i++) {
-      cellBlock[i].p         = loc[i].p;
-      cellBlock[i].path      = NULL;
-      //cellBlock[i].distToOnh = loc[i].dist;
-      cellBlock[i].count     = 0;
-      cellBlock[i].flag      = 0;
-      int distFromFovea = MACULAR_DIST_SQ(loc[i].p);
-      cellBlock[i].thickness = MAX_AXON_COUNT(sqrt(distFromFovea));
-      cellBlock[i].alternate = NULL;
-   
-      grid[loc[i].p.x][loc[i].p.y].soma = cellBlock + i;
-   }
+   for (int i = 0 ; i < numCells ; i++) 
+      cellBlock[i].p = loc[i].p;
+
+    free(loc);
    return;
 }//init_cells()

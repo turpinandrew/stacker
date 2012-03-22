@@ -3,16 +3,16 @@
 
 #define PIXELS_PER_MM 1000
 
-#define DENSE_SCALE 1.2 // multiply density by this factor
+#define DENSE_SCALE 1.2 // multiply density of cells by this factor
 
-#define SIZE (20 * PIXELS_PER_MM) //  20 mm square
+#define SIZE (20 * PIXELS_PER_MM) //  20 mm square for cells
 
-#define AXIAL_LENGTH 25    // mm
+#define AXIAL_LENGTH 25.0    // mm
 
-#define FOVEA_RADIUS ( 0.2 * PIXELS_PER_MM)
+#define FOVEA_RADIUS ( 0.2 * (float)PIXELS_PER_MM )
 
-#define ONH_X (int)((SIZE/2 + (15.0   /180.0*M_PI*AXIAL_LENGTH/2.0*PIXELS_PER_MM)))   // degrees -> pixels
-#define ONH_Y (int)((SIZE/2 + ( 2.0   /180.0*M_PI*AXIAL_LENGTH/2.0*PIXELS_PER_MM)))   // degrees -> pixels
+#define ONH_X (int)((SIZE/2 + (15.0 /180.0*M_PI*AXIAL_LENGTH/2.0*(float)PIXELS_PER_MM))) // degrees -> grid
+#define ONH_Y (int)((SIZE/2 + ( 2.0 /180.0*M_PI*AXIAL_LENGTH/2.0*(float)PIXELS_PER_MM))) // degrees -> grid
 #define ONH_MAJOR (int)(1.66/2.0 * (double)PIXELS_PER_MM) /* 1.66mm 2*major axis (x) of optic nerve */
 #define ONH_MINOR (int)(1.94/2.0 * (double)PIXELS_PER_MM) /* 1.94mm 2*minor axis (y) of optic nerve */
 
@@ -30,20 +30,25 @@
 #define MACULAR_DIST(_p) (int)round(sqrt( ((_p).x-SIZE/2)*((_p).x-SIZE/2)+((_p).y-SIZE/2)*((_p).y-SIZE/2)))
 #define MACULAR_DIST_SQ(_p) ( ((_p).x - SIZE/2)*((_p).x - SIZE/2) + ((_p).y - SIZE/2)*((_p).y - SIZE/2))
 
-   // linear from (FOVEA_RADIUS,0) to (MACULAR_RADIUS, MAX_THICK)
 #define min(_a, _b) ((_a) < (_b) ? (_a) : (_b))
+#define max(_a, _b) ((_a) > (_b) ? (_a) : (_b))
 //#define MAX_THICK 20
 //#define MAX_AXON_COUNT(_dist) (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK*(float)DENSE_SCALE)
+   // linear from (FOVEA_RADIUS,0) to (MACULAR_RADIUS, MAX_THICK)
 #define MAX_THICK 60
 #define MAX_AXON_COUNT(_dist) min(MAX_THICK, (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK))
 
+#define SCALE 1000.0   // how many cell sqaures per Grid square (so grid is SIZE/SCALE * SIZE/SCALE)
+
+#define GRID_SIZE ((int)ceil((float)SIZE/(float)SCALE))
+
     // how far to search for a new path during growth?
-#define NEW_PATH_RADIUS_LIMIT (MACULAR_RADIUS/2.0*1.1)
+#define NEW_PATH_RADIUS_LIMIT (round(MACULAR_RADIUS/2.0*1.1/SCALE))
 
     // don't search outside +- this from proposed trajectory during growth
-#define THETA_LIMIT  M_PI // (M_PI/3.0)     
+#define THETA_LIMIT  (M_PI/3.0)     
 
    // all in pixels
-void init_grid(int *size, Grid ***grid);
+void init_grid(Grid ***grid);
 void init_cells();
 int cmp_PointD(const void *a, const void *b);
