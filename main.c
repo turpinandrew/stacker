@@ -27,7 +27,7 @@
 int debug = 0; 
 
 #define PRINT_ENDPOINTS
-#define PRINT_PATHS 100000000
+#define PRINT_PATHS 1000
 //#define PRINT_OCT_PROFILE
 
 #define IS_ROOM(_ge) ((_ge)->count < (_ge)->thickness)

@@ -35,7 +35,7 @@
 //#define MAX_THICK 20
 //#define MAX_AXON_COUNT(_dist) (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK*(float)DENSE_SCALE)
    // linear from (FOVEA_RADIUS,0) to (MACULAR_RADIUS, MAX_THICK)
-#define MAX_THICK 30
+#define MAX_THICK 20
 #define MAX_AXON_COUNT(_dist) (min(MAX_THICK, (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK)) * SCALE * SCALE)
 
 #define SCALE 200.0   // sqrt of how many cell sqaures per Grid square (so grid is SIZE/SCALE * SIZE/SCALE)
