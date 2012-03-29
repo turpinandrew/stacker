@@ -60,7 +60,7 @@ void init_grid(Grid ***inGrid)
       assert(grid[x] != NULL);
    }
 
-   fprintf(stderr,"Initialising grid\n");
+   fprintf(stderr,"# Initialising grid\n");
 
         //Create threads into an array threads[0..THREADS-1]
    BB *bb = (BB *)malloc(sizeof(BB) * (THREADS+1));
@@ -161,7 +161,7 @@ int cmp_PointD(const void *a, const void *b)
 */
 void init_cells()
 {
-   fprintf(stderr,"\nMaking cells\n");
+   fprintf(stderr,"\n# Making cells\n");
         //Create threads into an array threads[0..THREADS-1]
    BB *bb = (BB *)malloc(sizeof(BB) * (THREADS+1));
    for(int i = 0 ; i < THREADS+1 ; i++) {
