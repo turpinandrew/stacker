@@ -24,23 +24,11 @@
 
 #define START_DIST 0.2*PIXELS_PER_MM    // number of pixels from ONH_EDGE to be included in first pool
 
-   // macros to control thickness
-#define MACULAR_RADIUS (3 * PIXELS_PER_MM)
-#define MACULAR_RADIUS_SQ (MACULAR_RADIUS * MACULAR_RADIUS)
-#define MACULAR_DIST(_p) (int)round(sqrt( ((_p).x-SIZE/2)*((_p).x-SIZE/2)+((_p).y-SIZE/2)*((_p).y-SIZE/2)))
-#define MACULAR_DIST_SQ(_p) ( ((_p).x - SIZE/2)*((_p).x - SIZE/2) + ((_p).y - SIZE/2)*((_p).y - SIZE/2))
+#define FOVEA_DIST_SQ(_p) ( ((_p).x - SIZE/2)*((_p).x - SIZE/2) + ((_p).y - SIZE/2)*((_p).y - SIZE/2))
 
-#define min(_a, _b) ((_a) < (_b) ? (_a) : (_b))
-#define max(_a, _b) ((_a) > (_b) ? (_a) : (_b))
-//#define MAX_THICK 20
-//#define MAX_AXON_COUNT(_dist) (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK*(float)DENSE_SCALE)
-   // linear from (FOVEA_RADIUS,0) to (MACULAR_RADIUS, MAX_THICK)
-#define MAX_THICK 20
-#define MAX_AXON_COUNT(_dist) (min(MAX_THICK, (int)round(((float)(_dist)-(float)FOVEA_RADIUS)/(float)MACULAR_RADIUS * (float)MAX_THICK)) * SCALE * SCALE)
+#define SCALE 500.0   // pixel length of grid square side
 
-#define SCALE 200.0   // sqrt of how many cell sqaures per Grid square (so grid is SIZE/SCALE * SIZE/SCALE)
-
-#define GRID_SIZE ((int)ceil((float)SIZE/(float)SCALE))
+#define GRID_SIZE ((int)ceil((float)SIZE/(float)SCALE))  // number of grid squares
 
     // how far to search for a new path during growth?
 #define NEW_PATH_RADIUS_LIMIT ((int)round(0.2*(double)SCALE))

@@ -33,16 +33,19 @@ static gpointer init_grid_piece(gpointer data) {
    for(int x = bb->tlx ; x <= bb->brx ; x++) {
       for(int y = bb->tly ; y <= bb->bry ; y++) {
          Point p_xy = {x*SCALE,y*SCALE};
-         int distFromFovea = MACULAR_DIST_SQ(p_xy);
+         int distFromFovea = FOVEA_DIST_SQ(p_xy);
          if (distFromFovea <= FOVEA_RADIUS * FOVEA_RADIUS)
             grid[x][y].thickness = 0;
-         else
-            grid[x][y].thickness = MAX_AXON_COUNT(sqrt(distFromFovea)) * SCALE;
-         grid[x][y].count           = 0;
-         grid[x][y].flag            = 0;
-         grid[x][y].lastPathThrough = NULL;
-         grid[x][y].p.x             = x;
-         grid[x][y].p.y             = y;
+         else {
+            //grid[x][y].thickness = (3.0*1000.0*1000.0) * (float)SCALE/(float)PIXELS_PER_MM * (float)SCALE/(float)PIXELS_PER_MM;
+            grid[x][y].thickness = 400000.0 * (float)SCALE/(float)PIXELS_PER_MM * (float)SCALE/(float)PIXELS_PER_MM;
+         }
+                  
+            grid[x][y].count           = 0;
+            grid[x][y].flag            = 0;
+            grid[x][y].lastPathThrough = NULL;
+            grid[x][y].p.x             = x;
+            grid[x][y].p.y             = y;
       }
    }
    return NULL;
@@ -81,31 +84,6 @@ void init_grid(Grid ***inGrid)
       g_thread_join(threads[i]);
    free(bb);
    free(threads);
-
-/*
-      // block out fovea
-   int fRad = round((float)FOVEA_RADIUS / (float)SCALE);
-   for(int x = -fRad ; x <= +fRad ; x++)
-      for(int y = -fRad ; y <= +fRad ; y++)
-         if (x*x + y*y <= fRad * fRad)
-            grid[GRID_SIZE/2+x][GRID_SIZE/2+y].thickness = 0;
-
-      // add horizontal raphe
-   for(int x = 0 ; x < GRID_SIZE/2 ; x++) {
-      int y = GRID_SIZE/2;  // XXX might want to change this to be dependant on Fov->ONH angle
-      grid[x][y].thickness = 0;
-   }
-
-      // block out ONH (+-2 in loops to catch rounding errors)
-   for(int x = ONH_X - ONH_MAJOR -2 ; x <= ONH_X + ONH_MAJOR + 2; x++)
-      for(int y = ONH_Y - ONH_MINOR -2 ; y <= ONH_Y + ONH_MINOR +2 ; y++) {
-         double theta = atan2((double) y - (double)ONH_Y, (double) x - (double)ONH_X);
-         Point p = {x,y};
-         Point po = {ONH_X, ONH_Y};
-         if (DIST(p,po) <= ONH_EDGE(theta) + 1)  // +1 just to get at least one pixel away
-            grid[(int)floor((float)x/(float)SCALE)][(int)floor((float)y/(float)SCALE)].thickness = 0;
-      }
-*/
 
    *inGrid = grid;
 }//init_grid()

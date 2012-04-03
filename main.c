@@ -24,6 +24,9 @@
 #include "types.h"
 #include "vector.h"
 
+#define min(_a, _b) ((_a) < (_b) ? (_a) : (_b))
+#define max(_a, _b) ((_a) > (_b) ? (_a) : (_b))
+
 int debug = 0; 
 
 #define PRINT_ENDPOINTS
@@ -180,6 +183,7 @@ makeOnePath(Grid *current, Grid *target, Grid **grid, char printIt) {
 
    Vector *gridUsed = vector_new(100, sizeof(Grid *));
    current->flag = 1;
+   current->count += 1;
    vector_add(gridUsed, current);
 
    Point onhP   = {ONH_X, ONH_Y};
@@ -243,7 +247,7 @@ findClosestCompleted(int i, Grid **grid) {
    for(int j = i-2 ; j >= 0 ; j--) {
       if (cross_raphe(cellBlock[i].p, cellBlock[j].p))  continue;  // crosses raphe
       Grid *g = toGridCoords(cellBlock[j].p, grid);
-      if (g->count >= g->thickness) continue;  // no room
+      if (!IS_ROOM(g)) continue;  // no room
       if (g->lastPathThrough == NULL) continue;       // just in case some of cellBlock has been skipped
       float dist = DIST(cellBlock[j].p, cellBlock[i].p);
       if ((dist < minD)) {
@@ -298,12 +302,13 @@ process(Grid **grid) {
    }
 
    for( ; i < numCells ; i++) {
-      if (cellBlock[i].p.x > ONH_X) continue;
+      //if (cellBlock[i].p.x > ONH_X) continue;
       //if (cellBlock[i].p.x < 5000) continue;
       //if (cellBlock[i].p.y < 5000) continue;
       //if (cellBlock[i].p.y > 15000) continue;
       //Cell *closest = cellBlock + findClosestCompleted(i);
       Grid *curr = toGridCoords(cellBlock[i].p, grid);
+   if (debug)printf("curr cell = %5d %5d ",cellBlock[i].p.x, cellBlock[i].p.y);
       Grid *targ = NULL;
       if (curr->lastPathThrough == NULL) {
          Cell *closest = findClosestCompleted(i, grid);
@@ -342,9 +347,7 @@ main() {
 #endif
 
    fprintf(stdout,"# DENSE_SCALE           %10.4f\n",DENSE_SCALE);
-   fprintf(stdout,"# MAX_THICK             %10d\n",MAX_THICK);
    fprintf(stdout,"# FOVEA_RADIUS          %10.4f mm %10.0f pixels\n",(float)FOVEA_RADIUS  /(float)PIXELS_PER_MM, FOVEA_RADIUS);
-   fprintf(stdout,"# MACULAR_RADIUS        %10.4f mm %10.0f pixels\n",(float)MACULAR_RADIUS/(float)PIXELS_PER_MM, (float)MACULAR_RADIUS);
    fprintf(stdout,"# THETA_LIMIT           %10.4f degrees\n",THETA_LIMIT*180.0/M_PI);
    fprintf(stdout,"# ONH_X                 %10d\n",ONH_X);
    fprintf(stdout,"# ONH_Y                 %10d\n",ONH_Y);
