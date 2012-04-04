@@ -25,8 +25,9 @@ void vector_free(Vector *v)
 {
    if (v != NULL) {
       free(v->p);
-       v->max_n = 0;
-       v->n = 0;
+      v->max_n = 0;
+      v->n = 0;
+      free(v);
    }
 }
 
