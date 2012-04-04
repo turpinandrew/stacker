@@ -18,6 +18,7 @@
 #include <math.h>
 #include <values.h>
 #include <assert.h>
+#include <stdlib.h>
 #include "setup.h"
 #include "queue.h"
 #include "density.h"
@@ -30,7 +31,7 @@
 int debug = 0; 
 
 #define PRINT_ENDPOINTS
-#define PRINT_PATHS 1000
+#define PRINT_PATHS 500
 //#define PRINT_OCT_PROFILE
 
 #define IS_ROOM(_ge) ((_ge)->count < (_ge)->thickness)
@@ -111,21 +112,19 @@ cross_raphe(Point a, Point b) {
 ** Use a spiral search (well, they're squares of increasing dist) outwards from
 ** current ignoring cells with flag==1, points outside theta range, and 
 ** count >= thickness.
+**
+** If aboveRaphe is 1, can only find a path with y-coord <= GRID_SIZE/2
+** If aboveRaphe is 0, can only find a path with y-coord >= GRID_SIZE/2
 */
 Grid *
-findNewPath(Grid *current, Grid *target, Grid **grid) {
+findNewPath(Grid *current, Grid *target, Grid **grid, int aboveRaphe, Grid *onh) {
    if (debug)printf("\n# current = %5d %5d ",current->p.x, current->p.y);
-   if (debug)printf(" wants %5d %5d\n",target->p.x, target->p.y);
+   if (debug)printf(" wants %5d %5d",target->p.x, target->p.y);
+   if (debug)printf(" with aboveRaphe=%d\n",aboveRaphe);
 
    double theta = atan2(target->p.y - current->p.y, target->p.x - current->p.x);
    double hiTheta = theta + THETA_LIMIT;
    double loTheta = theta - THETA_LIMIT;
-   if (target->p.x < GRID_SIZE/2) {
-      if (target->p.y < GRID_SIZE/2) 
-         hiTheta = min(hiTheta, 0.0); // negative thetas == away from raphe, x < fov only
-      else
-         loTheta = max(loTheta, 0.0); // positive thetas == away from raphe, x < fov only
-   }
    if (debug)printf("\ttheta range (%10.6f, %10.6f)\n",loTheta, hiTheta);
 
    target->flag = 1; // rule out current
@@ -137,33 +136,38 @@ findNewPath(Grid *current, Grid *target, Grid **grid) {
       int y = target->p.y + s->p.y;
       if ((x < 0) || (x >= GRID_SIZE)) continue;        // off grid
       if ((y < 0) || (y >= GRID_SIZE)) continue;
+      if (aboveRaphe  && (current->p.x < onh->p.x) && (y > GRID_SIZE/2)) continue;
+      if (!aboveRaphe && (current->p.x < onh->p.x) && (y < GRID_SIZE/2)) continue;
 
       g = &grid[x][y];
-      
+
+      if (debug)printf("   check (%4d,%4d) thick=%d flag=%d\n",g->p.x, g->p.y, g->thickness,g->flag);
+
       if (g->flag)         continue;    // on current path
       if (!IS_ROOM(g))     continue;    // no room
 
       minG = g;
    }
 
-   if (debug)printf("\tChosen (%10d, %10d)\n",minG->p.x, minG->p.y);
+   if (debug && minG)printf("\tChosen (%10d, %10d)\n",minG->p.x, minG->p.y);
+   if (debug && !minG)printf("\tChosen (NULL, NULL)\n");
    target->flag = 0; // reset current flag
 
    if (minG == NULL)
         return NULL;
    if (minG->lastPathThrough == NULL)  // No axons have been through here before
-{
       minG->lastPathThrough = target->lastPathThrough;   
-//if (minG->lastPathThrough->p.x < minG->p.x)
-//printf("Set ming's (%10d,%10d) last to (%10d,%10d)\n",minG->p.x,minG->p.y,minG->lastPathThrough->p.x,minG->lastPathThrough->p.y);
-}
 
    return minG;
 }//findNewPath()
 
-void unsetFlag(void *v) { ((Grid *)v)->flag = 0; }
+void unsetFlag(void *v) { 
+    Grid *g = *((Grid **)v);
+    g->flag = 0; 
+    printf("    Unset (%d,%d) %lx\n",g->p.x,g->p.y,g);
+}
 void printGrid(void *v) { 
-   Grid *g = ((Grid *)v); 
+   Grid *g = *((Grid **)v); 
    printf("%6d %6d\n",g->p.x, g->p.y);
 }
 
@@ -178,28 +182,35 @@ void
 makeOnePath(Grid *current, Grid *target, Grid **grid, char printIt) {
    assert(current != target);
 
-   if (debug) printf("Current = (%5d,%5d)\n", current->p.x, current->p.y);
+   int aboveRaphe = rand() % 2;
+   if (current->p.y < GRID_SIZE/2) aboveRaphe = 1;
+   if (current->p.y > GRID_SIZE/2) aboveRaphe = 0;
+
+   if (debug) printf("Current = (%5d,%5d) aboveRaphe=%d\n", current->p.x, current->p.y, aboveRaphe);
    if (debug) printf("Target  = (%5d,%5d)\n", target->p.x, target->p.y);
 
    Vector *gridUsed = vector_new(100, sizeof(Grid *));
    current->flag = 1;
    current->count += 1;
-   vector_add(gridUsed, current);
+   vector_add(gridUsed, &current);
 
    Point onhP   = {ONH_X, ONH_Y};
    Grid *onh    = toGridCoords(onhP, grid);
+
+   if (target == onh)                   // special case initial target
+      vector_add(gridUsed, &target);     // is onh
 
    while ((target != onh) && (target != NULL)) {
       if (debug)printf("\ttarget = (%5d,%5d)\n", target->p.x, target->p.y);
 
       if (!IS_ROOM(target)) 
-         target = findNewPath(current, target, grid);
+         target = findNewPath(current, target, grid, aboveRaphe, onh);
 
       if (target != NULL) {
          current->lastPathThrough = target;
          target->count += 1;
          target->flag = 1;
-         vector_add(gridUsed, target);
+         vector_add(gridUsed, &target);
          current = target;
          target = target->lastPathThrough;
       } else {
@@ -208,6 +219,9 @@ makeOnePath(Grid *current, Grid *target, Grid **grid, char printIt) {
 //if (vector_length(gridUsed) > 100) target = NULL;   // saftey net against the infinite
    }
 
+   //printf("Grid\n");
+   //vector_apply(gridUsed, printGrid); // reset all the flags along path
+   //printf("End Grid\n");
    vector_apply(gridUsed, unsetFlag); // reset all the flags along path
 
    //if (printIt && vector_length(gridUsed) > 3) {
@@ -218,9 +232,9 @@ makeOnePath(Grid *current, Grid *target, Grid **grid, char printIt) {
    }
 
    #ifdef PRINT_ENDPOINTS
-   Grid *first = (Grid *)vector_item_first(gridUsed);
+   Grid *first = *((Grid **)vector_item_first(gridUsed));
    if (target == onh) {
-      Grid *last  = (Grid *)vector_item_last(gridUsed);
+      Grid *last  = *((Grid **)vector_item_last(gridUsed));
       printf("%6d %6d ",first->p.x, first->p.y);
       printf("%6d %6d ",last->p.x, last->p.y);
       printf("%6d\n",vector_length(gridUsed));
@@ -364,6 +378,10 @@ main() {
    Grid **grid;
    init_grid(&grid);
 
+   Point onhP   = {ONH_X, ONH_Y};
+   Grid *onh    = toGridCoords(onhP, grid);
+   onh->thickness = 10000000;
+
    init_cells();
 
    init_scanPoints();
@@ -372,6 +390,7 @@ main() {
 //if (MACULAR_DIST(cellBlock[i].p) < MACULAR_RADIUS)
 //printf("im %d\n",i);
 //return 0;
+   srand(time(NULL));
    fprintf(stdout, "# Number of cells: %d\n",numCells);
    process(grid);
 
