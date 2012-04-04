@@ -38,7 +38,8 @@ static gpointer init_grid_piece(gpointer data) {
             grid[x][y].thickness = 0;
          else {
             //grid[x][y].thickness = (3.0*1000.0*1000.0) * (float)SCALE/(float)PIXELS_PER_MM * (float)SCALE/(float)PIXELS_PER_MM;
-            grid[x][y].thickness = 400000.0 * (float)SCALE/(float)PIXELS_PER_MM * (float)SCALE/(float)PIXELS_PER_MM;
+            //grid[x][y].thickness = 400000.0 * (float)SCALE/(float)PIXELS_PER_MM * (float)SCALE/(float)PIXELS_PER_MM;
+            grid[x][y].thickness = 60.0 * (float)SCALE * (float)SCALE;
          }
                   
             grid[x][y].count           = 0;

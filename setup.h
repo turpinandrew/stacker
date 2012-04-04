@@ -26,7 +26,7 @@
 
 #define FOVEA_DIST_SQ(_p) ( ((_p).x - SIZE/2)*((_p).x - SIZE/2) + ((_p).y - SIZE/2)*((_p).y - SIZE/2))
 
-#define SCALE 500.0   // pixel length of grid square side
+#define SCALE 100.0   // pixel length of grid square side
 
 #define GRID_SIZE ((int)ceil((float)SIZE/(float)SCALE))  // number of grid squares
 

@@ -40,6 +40,8 @@ int debug = 0;
 PointD *scanPoints; // list of deltaX, deltaY, theta to use for searching grid
 int scanPointLen;   // scanPoints[0..scanPointLen-1] are valid
 
+Vector *workingSpace;  // working space for makeOnePath
+
 extern Cell *cellBlock; // from setup.c
 extern int numCells;    // from setup.c
 
@@ -164,11 +166,10 @@ findNewPath(Grid *current, Grid *target, Grid **grid, int aboveRaphe, Grid *onh)
 void unsetFlag(void *v) { 
     Grid *g = *((Grid **)v);
     g->flag = 0; 
-    printf("    Unset (%d,%d) %lx\n",g->p.x,g->p.y,g);
 }
 void printGrid(void *v) { 
    Grid *g = *((Grid **)v); 
-   printf("%6d %6d\n",g->p.x, g->p.y);
+   printf("%6d %6d\n",g->p.x,g->p.y);
 }
 
 /*
@@ -189,7 +190,7 @@ makeOnePath(Grid *current, Grid *target, Grid **grid, char printIt) {
    if (debug) printf("Current = (%5d,%5d) aboveRaphe=%d\n", current->p.x, current->p.y, aboveRaphe);
    if (debug) printf("Target  = (%5d,%5d)\n", target->p.x, target->p.y);
 
-   Vector *gridUsed = vector_new(100, sizeof(Grid *));
+   Vector *gridUsed = workingSpace;
    current->flag = 1;
    current->count += 1;
    vector_add(gridUsed, &current);
@@ -216,15 +217,10 @@ makeOnePath(Grid *current, Grid *target, Grid **grid, char printIt) {
       } else {
          current->lastPathThrough = NULL; // don't come to this target again
       }
-//if (vector_length(gridUsed) > 100) target = NULL;   // saftey net against the infinite
    }
 
-   //printf("Grid\n");
-   //vector_apply(gridUsed, printGrid); // reset all the flags along path
-   //printf("End Grid\n");
    vector_apply(gridUsed, unsetFlag); // reset all the flags along path
 
-   //if (printIt && vector_length(gridUsed) > 3) {
    if (printIt && target == onh) {
       vector_apply(gridUsed, printGrid);
       printf("%6d %6d\n",onh->p.x,onh->p.y);
@@ -242,7 +238,7 @@ makeOnePath(Grid *current, Grid *target, Grid **grid, char printIt) {
       printf("# K %d %d\n",first->p.x, first->p.y);
    }
    #endif
-   vector_free(gridUsed);
+   vector_empty(gridUsed);
 
    return;
 }//makeOnePath()
@@ -386,6 +382,8 @@ main() {
 
    init_scanPoints();
 
+   workingSpace = vector_new(100, sizeof(Grid *));
+
 //for(int i = 0 ; i < numCells ; i++)
 //if (MACULAR_DIST(cellBlock[i].p) < MACULAR_RADIUS)
 //printf("im %d\n",i);
@@ -396,6 +394,8 @@ main() {
 
    /* Release gtk's global lock */
    gdk_threads_leave();
+
+    vector_free(workingSpace);
 
    return 0;
 }
